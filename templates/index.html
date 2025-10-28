@@ -6,8 +6,102 @@
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   </head>
   <body>
-    <h1 class="text-3xl font-bold underline">
-      Hello world!
-    </h1>
+    <div class="container mx-auto p-8">
+      <h1 class="text-3xl font-bold mb-8">Door Status Tracker</h1>
+
+      <div class="bg-white shadow-md rounded-lg p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-4">Current Status</h2>
+        <div id="current-status" class="text-2xl font-bold mb-4 p-4 rounded-lg text-center">
+          Loading...
+        </div>
+      </div>
+
+      <div class="bg-white shadow-md rounded-lg p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-4">Change Status</h2>
+        <div class="flex gap-4">
+          <button onclick="setStatus(0)" class="bg-green-500 hover:bg-green-600 hover:cursor-pointer text-white px-6 py-3 rounded-lg font-medium">
+            IDLE
+          </button>
+          <button onclick="setStatus(1)" class="bg-yellow-500 hover:bg-yellow-600 hover:cursor-pointer text-white px-6 py-3 rounded-lg font-medium">
+            BUSY
+          </button>
+          <button onclick="setStatus(2)" class="bg-red-500 hover:bg-red-600 hover:cursor-pointer text-white px-6 py-3 rounded-lg font-medium">
+            MEETING
+          </button>
+        </div>
+      </div>
+
+
+
+    <script>
+        const STATUS_NAMES = {
+            0: 'IDLE',
+            1: 'BUSY',
+            2: 'MEETING'
+        };
+
+        const STATUS_COLORS = {
+            0: 'bg-green-100 text-green-800',
+            1: 'bg-yellow-100 text-yellow-800',
+            2: 'bg-red-100 text-red-800'
+        };
+
+        let currentStatus = 0;
+
+        function updateStatusDisplay() {
+            fetch("/api/status")
+                .then((res) => {
+                    if (!res.ok) {
+                        throw new Error(`HTTP error! Status: ${res.status}`);
+                    }
+                    return res.json();
+                })
+                .then((data) => {
+                    currentStatus = data.status;
+                    const statusElement = document.getElementById('current-status');
+                    const statusName = STATUS_NAMES[currentStatus];
+                    const statusColor = STATUS_COLORS[currentStatus];
+
+                    statusElement.textContent = statusName;
+                    statusElement.className = `text-2xl font-bold mb-4 p-4 rounded-lg text-center ${statusColor}`;
+                })
+                .catch((error) => {
+                    console.error('Error fetching status:', error);
+                    document.getElementById('current-status').textContent = 'Error loading status';
+                });
+        }
+
+        function setStatus(newStatus) {
+            const formData = new FormData();
+            formData.append('status', newStatus);
+
+            fetch("/api/status", {
+                method: 'POST',
+                body: formData
+            })
+            .then((res) => {
+                if (!res.ok) {
+                    throw new Error(`HTTP error! Status: ${res.status}`);
+                }
+                return res.json();
+            })
+            .then((data) => {
+                console.log('Status updated:', data);
+                updateStatusDisplay();
+            })
+            .catch((error) => {
+                console.error('Error updating status:', error);
+                alert('Error updating status: ' + error.message);
+            });
+        }
+
+        // Load initial data
+        updateStatusDisplay();
+
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            updateStatusDisplay();
+        }, 30000);
+    </script>
   </body>
 </html>
