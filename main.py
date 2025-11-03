@@ -1,20 +1,38 @@
-from flask import Flask, render_template
 from enum import Enum
 
+from flask import Flask, render_template
 from flask.globals import request
+from gpiozero import LED
 
-app = Flask(__name__)
-
-@app.route('/')
-def index():
-    return render_template("index.html")
-
+# State Machine ---
 class Status(Enum):
     Idle=0
     Busy=1
     Meeting=2
 
 currentStatus = Status.Idle
+idleLED = LED(3)
+busyLED = LED(5)
+meetingLED = LED(7)
+
+def setStatus(status: Status):
+    idleLED.off()
+    busyLED.off()
+    meetingLED.off()
+    if status == Status.Idle:
+        idleLED.on()
+    elif status == Status.Busy:
+        busyLED.on()
+    elif status == Status.Meeting:
+        meetingLED.on()
+    currentStatus = status
+
+# Flask Setup ---
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+    return render_template("index.html")
 
 @app.get('/api/status')
 def status():
@@ -41,11 +59,11 @@ def statusPost():
             "status": int(currentStatus.value)
         }
 
-    currentStatus = Status(statusFormatted)
+    setStatus(Status(statusFormatted))
 
     return {
         "status": int(currentStatus.value)
     }
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
