@@ -1,8 +1,8 @@
 from enum import Enum
-
 from flask import Flask, render_template
 from flask.globals import request
 from gpiozero import LED
+import atexit
 
 # State Machine ---
 class Status(Enum):
@@ -11,11 +11,32 @@ class Status(Enum):
     Meeting=2
 
 currentStatus = Status.Idle
-idleLED = LED(3)
-busyLED = LED(5)
-meetingLED = LED(7)
+
+# Initialize LEDs only once
+idleLED = None
+busyLED = None
+meetingLED = None
+
+def init_gpios():
+    global idleLED, busyLED, meetingLED
+    if idleLED is None:
+        idleLED = LED(3)
+        busyLED = LED(5)
+        meetingLED = LED(7)
+        setStatus(Status.Idle)
+
+def cleanup_gpios():
+    if idleLED:
+        idleLED.close()
+    if busyLED:
+        busyLED.close()
+    if meetingLED:
+        meetingLED.close()
+
+atexit.register(cleanup_gpios)
 
 def setStatus(status: Status):
+    global currentStatus
     idleLED.off()
     busyLED.off()
     meetingLED.off()
@@ -49,21 +70,18 @@ def statusPost():
         return {
             "status": int(currentStatus.value)
         }
-
     statusFormatted = int(foundStatus)
     print(statusFormatted, type(statusFormatted))
-
     if statusFormatted not in [0, 1, 2]:
         print('bad formatting - invalid status value')
         return {
             "status": int(currentStatus.value)
         }
-
     setStatus(Status(statusFormatted))
-
     return {
         "status": int(currentStatus.value)
     }
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    init_gpios()
+    app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
