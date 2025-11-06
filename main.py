@@ -1,4 +1,5 @@
 from enum import Enum
+from time import sleep
 from flask import Flask, render_template
 from flask.globals import request
 from gpiozero import LED
@@ -20,9 +21,13 @@ meetingLED = None
 def init_gpios():
     global idleLED, busyLED, meetingLED
     if idleLED is None:
-        idleLED = LED(3)
-        busyLED = LED(5)
-        meetingLED = LED(7)
+        # Physical pin mapping to BCM GPIO numbers:
+        # Physical pin 3 = GPIO2 (BCM)
+        # Physical pin 5 = GPIO3 (BCM)
+        # Physical pin 7 = GPIO4 (BCM)
+        idleLED = LED(2)      # Physical pin 3
+        busyLED = LED(3)      # Physical pin 5
+        meetingLED = LED(4)   # Physical pin 7
         setStatus(Status.Idle)
 
 def cleanup_gpios():
@@ -64,7 +69,7 @@ def status():
 @app.post('/api/status')
 def statusPost():
     global currentStatus
-    foundStatus = request.form["status"]
+    foundStatus = request.form.get("status")  # Changed to .get() for safety
     if not foundStatus:
         print('no found status')
         return {
